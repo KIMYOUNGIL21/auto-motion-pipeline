@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>auto-motion — 유튜브 롱폼 자동화 파이프라인 해부</title>
+<meta name="description" content="사람은 기획·시사·승인만 하고 나머지는 코드가 만드는 유튜브 롱폼 자동화 저장소의 전체 구조와 편당 원가·품질 게이트·실패 기록을 공개한다.">
+<style>
+:root{
+  --bg:#0b0e14;
+  --panel:#11151f;
+  --panel-2:#0e131c;
+  --line:#232a3a;
+  --line-soft:#1a2130;
+  --fg:#e6e9f0;
+  --dim:#9aa3b5;
+  --dimmer:#6e7789;
+  --mint:#7ee787;
+  --orange:#ff6a53;
+  --violet:#8f7bff;
+  --cyan:#4dd8ff;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.75;
+  letter-spacing:-0.01em;
+  overflow-x:hidden;
+  word-break:keep-all;
+}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+a{color:var(--mint);text-decoration:none;border-bottom:1px solid rgba(126,231,135,.3)}
+a:hover{border-bottom-color:var(--mint)}
+
+/* ---------- header ---------- */
+header{
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(900px 380px at 12% -12%, rgba(126,231,135,.10), transparent 62%),
+    radial-gradient(700px 320px at 88% -20%, rgba(143,123,255,.10), transparent 60%);
+}
+.head-inner{padding:76px 0 56px}
+.eyebrow{
+  font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--mint);margin:0 0 18px
+}
+h1{
+  font-size:clamp(28px,5.2vw,46px);line-height:1.28;margin:0 0 20px;font-weight:800;letter-spacing:-0.03em;
+}
+h1 .thin{color:var(--dim);font-weight:600}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--dim);margin:0;max-width:56ch}
+.lede strong{color:var(--fg);font-weight:600}
+
+.kpis{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;
+  overflow:hidden;margin:38px 0 0
+}
+.kpi{background:var(--panel);padding:16px 18px}
+.kpi b{display:block;font-size:clamp(20px,3.4vw,26px);font-weight:800;letter-spacing:-0.02em;line-height:1.2}
+.kpi span{display:block;font-size:12.5px;color:var(--dimmer);margin-top:5px;line-height:1.5}
+.kpi.mint b{color:var(--mint)}
+.kpi.orange b{color:var(--orange)}
+
+/* ---------- nav ---------- */
+nav{
+  position:sticky;top:0;z-index:20;
+  background:rgba(11,14,20,.94);
+  backdrop-filter:saturate(160%) blur(10px);
+  -webkit-backdrop-filter:saturate(160%) blur(10px);
+  border-bottom:1px solid var(--line);
+}
+nav ol{
+  list-style:none;margin:0;padding:0;display:flex;gap:4px;
+  overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;
+}
+nav ol::-webkit-scrollbar{display:none}
+nav a{
+  display:block;white-space:nowrap;padding:12px 12px;font-size:13.5px;color:var(--dim);
+  border-bottom:2px solid transparent;font-variant-numeric:tabular-nums
+}
+nav a:hover{color:var(--fg);border-bottom-color:var(--line)}
+nav a .n{font-family:var(--mono);color:var(--dimmer);margin-right:6px;font-size:12px}
+
+/* ---------- sections ---------- */
+section{padding:64px 0 8px;border-top:1px solid var(--line-soft)}
+section:first-of-type{border-top:none}
+h2{
+  font-size:clamp(21px,3.4vw,28px);font-weight:800;letter-spacing:-0.025em;
+  margin:0 0 8px;padding-left:14px;border-left:3px solid var(--mint);line-height:1.35
+}
+h2 .num{font-family:var(--mono);font-size:.62em;color:var(--mint);margin-right:10px;font-weight:600}
+.sub{color:var(--dim);margin:0 0 28px;padding-left:17px;font-size:15px}
+h3{font-size:17px;font-weight:700;margin:34px 0 12px;letter-spacing:-0.02em}
+h3 .tag{
+  font-family:var(--mono);font-size:11px;color:var(--bg);background:var(--dim);
+  border-radius:4px;padding:2px 6px;margin-right:8px;vertical-align:2px;letter-spacing:.04em
+}
+p{margin:0 0 16px}
+p.muted{color:var(--dim)}
+ul{margin:0 0 16px;padding-left:20px}
+li{margin:0 0 8px}
+li::marker{color:var(--dimmer)}
+code{
+  font-family:var(--mono);font-size:.855em;background:#161b27;border:1px solid var(--line);
+  border-radius:5px;padding:1.5px 5px;color:#cfe3ff;white-space:nowrap
+}
+.mint{color:var(--mint)}
+.orange{color:var(--orange)}
+.dim{color:var(--dim)}
+
+/* ---------- cards ---------- */
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:22px 24px;margin:0 0 18px
+}
+.card > :last-child{margin-bottom:0}
+.card-title{font-weight:700;font-size:16px;margin:0 0 10px;letter-spacing:-0.02em}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+
+.split .card-title.human{color:var(--orange)}
+.split .card-title.machine{color:var(--mint)}
+.split ul{padding-left:18px;margin-bottom:0}
+.split li{font-size:14.5px;color:var(--dim)}
+.split li b{color:var(--fg);font-weight:600}
+
+.note{
+  border-left:3px solid var(--orange);background:rgba(255,106,83,.05);
+  border-radius:0 8px 8px 0;padding:14px 18px;margin:0 0 18px;font-size:14.5px;color:var(--dim)
+}
+.note b{color:var(--fg)}
+.note.ok{border-left-color:var(--mint);background:rgba(126,231,135,.05)}
+
+/* ---------- tables ---------- */
+.scroll{
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--line);border-radius:12px;margin:0 0 18px;background:var(--panel)
+}
+table{border-collapse:collapse;width:100%;min-width:660px;font-size:14px}
+th,td{padding:11px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line-soft)}
+thead th{
+  background:var(--panel-2);color:var(--dim);font-weight:600;font-size:12.5px;
+  letter-spacing:.04em;white-space:nowrap;border-bottom:1px solid var(--line);position:relative
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.018)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{white-space:pre-wrap;word-break:break-all;display:inline-block;line-height:1.6}
+.stage{font-family:var(--mono);font-size:12px;color:var(--dimmer);white-space:nowrap}
+tr.human-row td{background:rgba(255,106,83,.05)}
+tr.human-row .stage{color:var(--orange)}
+.pill{
+  display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:20px;
+  border:1px solid var(--line);color:var(--dim);white-space:nowrap
+}
+.pill.free{color:var(--mint);border-color:rgba(126,231,135,.35)}
+.pill.paid{color:var(--orange);border-color:rgba(255,106,83,.35)}
+
+/* ---------- bar chart ---------- */
+.bar-wrap{min-width:100px}
+.bar{
+  height:9px;border-radius:5px;background:var(--mint);min-width:2px;display:block;
+  box-shadow:0 0 0 1px rgba(126,231,135,.25)
+}
+.bar.hot{background:var(--orange);box-shadow:0 0 0 1px rgba(255,106,83,.25)}
+.bar.warm{background:var(--violet);box-shadow:0 0 0 1px rgba(143,123,255,.25)}
+
+/* ---------- inventory ---------- */
+.inv{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.inv > div{background:var(--panel);padding:18px 20px}
+.inv b{display:block;font-size:24px;font-weight:800;letter-spacing:-0.02em;line-height:1.2}
+.inv .lbl{font-size:13.5px;font-weight:600;margin-top:4px}
+.inv .desc{font-size:12.5px;color:var(--dimmer);margin-top:6px;line-height:1.6}
+
+.catbars{margin:0 0 18px}
+.catrow{display:grid;grid-template-columns:120px 1fr 40px;gap:12px;align-items:center;padding:5px 0;font-size:13.5px}
+.catrow .cname{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catrow .ctrack{background:var(--line-soft);border-radius:4px;height:10px;overflow:hidden}
+.catrow .cfill{height:100%;background:var(--mint);opacity:.85;display:block}
+.catrow .cnum{text-align:right;font-variant-numeric:tabular-nums;color:var(--fg);font-size:13px}
+
+/* ---------- gates ---------- */
+.gatelist{list-style:none;padding:0;margin:0}
+.gatelist li{
+  display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;
+  padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:14.5px;margin:0
+}
+.gatelist li:last-child{border-bottom:none}
+.gatelist .mark{font-family:var(--mono);font-size:11px;color:var(--orange);white-space:nowrap;
+  border:1px solid rgba(255,106,83,.3);border-radius:4px;padding:1px 6px}
+.gatelist .mark.warn{color:var(--dim);border-color:var(--line)}
+
+/* ---------- findings ---------- */
+.finding{
+  border:1px solid var(--line);border-radius:12px;background:var(--panel);
+  padding:20px 22px;margin:0 0 14px
+}
+.finding h4{
+  margin:0 0 10px;font-size:16px;font-weight:700;letter-spacing:-0.02em;line-height:1.45
+}
+.finding h4 .idx{font-family:var(--mono);font-size:12px;color:var(--orange);margin-right:9px}
+.finding p{font-size:14.5px;color:var(--dim);margin:0 0 10px}
+.finding p:last-child{margin-bottom:0}
+.finding .fix{
+  font-size:14px;color:var(--fg);border-left:2px solid var(--mint);padding-left:12px;margin-top:12px
+}
+.finding .fix b{color:var(--mint);font-weight:600}
+.src{font-family:var(--mono);font-size:11.5px;color:var(--dimmer);margin-top:12px;display:block;
+  word-break:break-all;line-height:1.6}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);margin-top:64px;padding:40px 0 72px;color:var(--dimmer);font-size:13.5px}
+footer p{margin:0 0 10px}
+footer .stamp{font-family:var(--mono);font-size:12px;color:var(--dim)}
+
+@media (max-width:720px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .head-inner{padding:52px 0 40px}
+  section{padding:48px 0 4px}
+  .card{padding:18px 18px}
+  .finding{padding:17px 18px}
+  .catrow{grid-template-columns:96px 1fr 34px;gap:9px;font-size:12.5px}
+  body{font-size:15.5px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap head-inner">
+    <p class="eyebrow">auto-motion / 파이프라인 공개 문서</p>
+    <h1>사람이 세 번 개입하고,<br>나머지는 저장소가 만든다<br><span class="thin">유튜브 롱폼 자동화 파이프라인 전체 해부</span></h1>
+    <p class="lede">
+      기획·최종 시사·발행 승인. 사람이 하는 일은 이 세 가지뿐이다.
+      대본 씬 설계부터 TTS·섹션 렌더·조립·라우드니스 정규화·전달 규격 QA까지는
+      전부 저장소 안의 스크립트가 처리한다.
+      이 문서는 <strong>그 파이프라인의 구조와, 8일 동안 10편을 만들며 나온 실측 숫자와 실패 기록</strong>을 그대로 옮긴 것이다.
+    </p>
+
+    <div class="kpis">
+      <div class="kpi mint"><b>10편</b><span>롱폼 (+ 연계 쇼츠 24편)</span></div>
+      <div class="kpi"><b>8일</b><span>첫 커밋 → 10호 예약, 커밋 92개</span></div>
+      <div class="kpi mint"><b>₩334</b><span>최저 편당 한계원가 (9호)</span></div>
+      <div class="kpi orange"><b>₩9,851</b><span>최고 편당 한계원가 (1호 · 56.6초)</span></div>
+      <div class="kpi"><b>156배</b><span>초당 원가 최대 격차</span></div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <ol>
+      <li><a href="#boundary"><span class="n">01</span>자동화 경계</a></li>
+      <li><a href="#pipeline"><span class="n">02</span>E2E 파이프라인</a></li>
+      <li><a href="#assets"><span class="n">03</span>에셋 인벤토리</a></li>
+      <li><a href="#gates"><span class="n">04</span>품질 게이트</a></li>
+      <li><a href="#numbers"><span class="n">05</span>실측 데이터</a></li>
+      <li><a href="#hardware"><span class="n">06</span>8GB 제약</a></li>
+      <li><a href="#findings"><span class="n">07</span>삽질 기록</a></li>
+      <li><a href="#open"><span class="n">08</span>아직 안 된 것</a></li>
+    </ol>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============ 01 ============ -->
+<section id="boundary">
+  <h2><span class="num">01</span>무엇을 자동화했나</h2>
+  <p class="sub">이 경계선이 이 프로젝트의 전부다. 어디까지 사람이고 어디부터 코드인지가 흐려지면 자동화라는 말은 의미가 없다.</p>
+
+  <p>
+    제작 단위는 <b>세트</b>다. 롱폼 1편(5~8분) + 그 내용에서 뽑은 쇼츠 3편.
+    한 세트를 만드는 동안 사람이 키보드를 잡는 순간은 세 번이고, 그 사이는 전부 저장소 안의 CLI가 채운다.
+  </p>
+
+  <div class="grid-2 split">
+    <div class="card">
+      <p class="card-title human">사람이 하는 일 — 3곳</p>
+      <ul>
+        <li><b>① 기획</b> — 주제·훅·목표 길이를 정한다. 완료 기준은 "첫 5초 훅과 엔딩이 한 문장으로 정리됐나".</li>
+        <li><b>② 최종 시사</b> — QA 콘택트 시트와 의심 구간 원본 프레임을 눈으로 본다. 숫자 검증만으로는 통과시키지 않는다.</li>
+        <li><b>③ 발행 승인</b> — 완성본은 언제나 비공개로 먼저 올라간다. 명시적 승인 시각이 기록되기 전에는 공개도 예약도 하지 않는다.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="card-title machine">저장소가 하는 일</p>
+      <ul>
+        <li><b>씬 타임라인 컴파일</b> — 씬 ID + 상대 오프셋 → 절대 프레임. 프레임이 유일한 타이밍 권위다.</li>
+        <li><b>나레이션·자막</b> — TTS 생성(캐시·영수증 포함), 실측 클립 길이 기반 번인 자막 JSON 생성.</li>
+        <li><b>섹션 영상</b> — 정보 씬(코드 렌더), 손그림 씬, 시네마틱 컷 배치.</li>
+        <li><b>오디오</b> — BGM cue 배치, 나레이션 구간 자동 덕킹, kind 전환마다 whoosh 자동 삽입.</li>
+        <li><b>검증</b> — 구조·출처·에셋·타이밍 preflight, 페이싱 규칙 검사, 라우드니스 정규화, 전달 규격 QA.</li>
+        <li><b>재현성</b> — 렌더 입력 전부 Git 추적·HEAD 일치 강제. 커밋되지 않은 입력으로는 최종본을 만들 수 없다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>공개·예약은 승인 전에 절대 하지 않는다.</b> QA를 통과했고 업로드 ID가 있어도,
+    승인 시각이 기록되지 않은 상태에서는 상태 전이를 멈춘다. 이건 기술 제약이 아니라 운영 규칙이고,
+    발행 대장의 상태 모델(<code>draft → rendered → qa_passed → uploaded_private → approved → scheduled/published</code>)이
+    그걸 강제한다.
+  </div>
+
+  <h3>단일 진실 원본이 어디에 있나</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>대상</th><th>단일 기준 파일</th><th>이유</th></tr></thead>
+      <tbody>
+        <tr><td>편별 설계도</td><td><code>remotion/src/episodes/&lt;id&gt;.ts</code></td><td>씬 ID·초·kind·소스 오디오 정책·BGM cue·영수증이 하나의 타입(<code>EpisodeSpec</code>)에 들어간다</td></tr>
+        <tr><td>활성 편 스위치</td><td><code>remotion/src/active-episode.ts</code></td><td>bundle import 한 줄. 편을 바꾸는 지점이 한 곳뿐이라 상태가 갈리지 않는다</td></tr>
+        <tr><td>프레임 계산</td><td><code>remotion/src/episode.ts</code></td><td>초가 아니라 반올림된 프레임을 누적한다. 소수점 초에서 길이가 어긋나는 걸 구조적으로 막는다</td></tr>
+        <tr><td>원가 요율</td><td><code>remotion/src/cost.ts</code></td><td>화면에 인쇄되는 영수증 숫자와 문서의 숫자가 같은 함수를 본다</td></tr>
+        <tr><td>시각 규칙</td><td><code>STYLE.md</code></td><td>팔레트·페이싱·자막 안전지대. 코드의 <code>validatePacing()</code>이 이 문서를 검사로 옮긴 것</td></tr>
+        <tr><td>BGM 재고</td><td><code>assets/bgm/library.json</code></td><td>수량·승인 상태·출처의 기준. 여기서 approved인 트랙만 스테이징된다</td></tr>
+        <tr><td>발행 상태</td><td><code>RELEASES.md</code></td><td>Studio에서 직접 확인한 사실만 기록한다. 추정으로 빈칸을 채우지 않는다</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 02 ============ -->
+<section id="pipeline">
+  <h2><span class="num">02</span>E2E 파이프라인</h2>
+  <p class="sub">기획에서 회수까지 20단계. 주황색 줄이 사람이 개입하는 지점이다.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>단계</th><th>하는 일</th><th>도구</th><th>실행 명령</th><th>산출물</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="human-row">
+          <td class="stage">01 기획</td>
+          <td>주제·훅·목표 길이 결정 <span class="pill paid">사람</span></td>
+          <td>—</td>
+          <td>—</td>
+          <td>첫 5초 훅 + 엔딩 한 문장</td>
+        </tr>
+        <tr>
+          <td class="stage">02 스펙</td>
+          <td>씬 ID·초·kind·소스 오디오 정책을 타입으로 고정</td>
+          <td>TypeScript <code>EpisodeSpec</code></td>
+          <td><code>npm run episode -- show --episode &lt;id&gt;</code></td>
+          <td><code>src/episodes/&lt;id&gt;.ts</code></td>
+        </tr>
+        <tr>
+          <td class="stage">03 나레이션</td>
+          <td>씬별 TTS 클립 생성. source hash 캐시 + intent journal로 결제 후 중단분 복구</td>
+          <td>ElevenLabs <code>eleven_multilingual_v2</code><br><span class="dim">보조 엔진: Typecast <code>ssfm-v30</code></span> <span class="pill paid">유료</span></td>
+          <td><code>npm run episode -- narration:compile --generate --mix</code></td>
+          <td><code>assets/audio/&lt;id&gt;/*.mp3</code></td>
+        </tr>
+        <tr>
+          <td class="stage">04 타임라인</td>
+          <td>씬 상대 오프셋 → 절대 프레임, 단일 나레이션 트랙 믹스</td>
+          <td>자체 컴파일러 <code>episode.ts</code> <span class="pill free">무료</span></td>
+          <td><code>npm run episode -- narration:compile --mix</code></td>
+          <td><code>&lt;id&gt;.narration.json</code></td>
+        </tr>
+        <tr>
+          <td class="stage">05 자막</td>
+          <td>실측 TTS 클립 안에서 대본 글자 수 비례로 번인 자막 타이밍 생성</td>
+          <td>자체 <code>Captions.tsx</code><br><span class="dim">보조 타이밍: Whisper.cpp <code>ggml-small</code></span> <span class="pill free">무료</span></td>
+          <td>같은 compile 명령 / <code>scripts/transcribe.sh &lt;오디오&gt;</code></td>
+          <td>자막 JSON, SRT·워드 타임스탬프</td>
+        </tr>
+        <tr>
+          <td class="stage">06 정보 씬</td>
+          <td>코드·차트·타이포·카운터 — 글자가 들어가는 화면 전부</td>
+          <td>HyperFrames 0.7.107 <span class="pill free">무료</span></td>
+          <td><code>npx hyperframes@0.7.107 render -c compositions/&lt;씬&gt;.html -o ../remotion/public/sections/&lt;씬&gt;.mp4</code></td>
+          <td>섹션 MP4 (현재 컴포지션 95종)</td>
+        </tr>
+        <tr>
+          <td class="stage">07 손그림 씬</td>
+          <td>SRT → 영역 annotation → 연속 필기 스트리밍 렌더</td>
+          <td>Python 화이트보드 툴 <span class="pill free">무료</span></td>
+          <td><code>.venv/bin/python scripts/render_stream_whiteboard.py</code></td>
+          <td>미색 종이 손그림 MP4</td>
+        </tr>
+        <tr>
+          <td class="stage">08 시네마틱</td>
+          <td>콜드오픈·챕터 히어로 컷. <b>신규 생성 전에 기존 라이브러리 재사용을 먼저 검토</b></td>
+          <td>Higgsfield MCP (Soul 이미지 → i2v) <span class="pill paid">크레딧</span><br>Grok Imagine 라이브러리 <span class="pill free">보유분</span></td>
+          <td>MCP <code>generate_image</code> → <code>generate_video</code></td>
+          <td><code>remotion/public/grok/</code>, <code>higgsfield/</code></td>
+        </tr>
+        <tr>
+          <td class="stage">09 B-roll</td>
+          <td>실존 장면 보조 컷. 출처·라이선스·SHA-256 기록 필수</td>
+          <td>Pexels · Pixabay <span class="pill free">무료</span></td>
+          <td><code>npm run stock -- pexels videos "&lt;검색어&gt;" 3</code></td>
+          <td><code>assets/stock/</code> + provenance</td>
+        </tr>
+        <tr>
+          <td class="stage">10 BGM</td>
+          <td>승인 트랙 스테이징 + 씬 ID 앵커 cue 배치. 영상 제작 중 신규 생성 금지</td>
+          <td>사전 제작 라이브러리 236곡 <span class="pill free">지불 완료</span></td>
+          <td><code>npm run bgm -- list</code> → <code>npm run bgm -- stage &lt;track-id&gt;</code></td>
+          <td><code>remotion/public/staged/bgm/</code></td>
+        </tr>
+        <tr>
+          <td class="stage">11 SFX</td>
+          <td>kind가 바뀌는 경계마다 whoosh 자동 삽입 (경계 0.15초 전 시작)</td>
+          <td><code>assets/sfx/</code> CC0 <span class="pill free">무료</span></td>
+          <td>spec의 <code>sfx</code> 필드 — Master가 자동 배치</td>
+          <td>전환 효과음 시퀀스</td>
+        </tr>
+        <tr>
+          <td class="stage">12 개발 게이트</td>
+          <td>구조·에셋·출처·타이밍 + strict 타입체크 + 렌더 플래너 self-test</td>
+          <td>preflight:dev · tsc · eslint <span class="pill free">무료</span></td>
+          <td><code>npm run check</code></td>
+          <td>검사 리포트 (미추적 입력은 집계 경고)</td>
+        </tr>
+        <tr>
+          <td class="stage">13 동결</td>
+          <td>렌더 입력 전부 Git 추적·HEAD 일치 강제 + 전체 미디어 디코드</td>
+          <td>preflight <code>--production</code></td>
+          <td><code>npm run preflight</code></td>
+          <td>재현 가능한 렌더 계약</td>
+        </tr>
+        <tr>
+          <td class="stage">14 렌더 계획</td>
+          <td>씬 경계에서 최대 1,600프레임 청크로 분할. 파일을 건드리지 않는 안전 기본값</td>
+          <td>자체 플래너 <code>render-plan.ts</code></td>
+          <td><code>npm run render</code></td>
+          <td>청크 계획 (JSON 가능)</td>
+        </tr>
+        <tr>
+          <td class="stage">15 E2E 렌더</td>
+          <td>청크 렌더 → concat cadence 검증 → 오디오 청크 WAV → 임시 MOV mux</td>
+          <td>Remotion 4 + ffmpeg <span class="pill free">무료</span></td>
+          <td><code>npm run render -- --execute</code></td>
+          <td><code>out/&lt;id&gt;/work/</code> 중간본</td>
+        </tr>
+        <tr>
+          <td class="stage">16 마감</td>
+          <td>영상 stream-copy + BT.709 태그, 2-pass loudnorm + 리미터, AAC 192k / 48kHz stereo</td>
+          <td>ffmpeg <span class="pill free">무료</span></td>
+          <td>E2E가 자동 호출 / <code>npm run finalize -- &lt;master&gt; &lt;new-candidate&gt;</code></td>
+          <td>staged final</td>
+        </tr>
+        <tr>
+          <td class="stage">17 QA</td>
+          <td>전달 규격 하드 게이트 + 블랙·무음·정지 화면 경고 + 콘택트 시트</td>
+          <td>ffprobe / ffmpeg <span class="pill free">무료</span></td>
+          <td><code>npm run qa -- &lt;final&gt; --interval 4</code></td>
+          <td><code>qa-report.json</code>, <code>qa-report.md</code>, <code>contact-sheet.png</code></td>
+        </tr>
+        <tr class="human-row">
+          <td class="stage">18 시사</td>
+          <td>콘택트 시트 + 의심 구간 원본 프레임 육안 검수 <span class="pill paid">사람</span></td>
+          <td>—</td>
+          <td><code>ffmpeg -ss &lt;초&gt; -frames:v 1</code></td>
+          <td>하드 실패 0 + 사람 확인</td>
+        </tr>
+        <tr>
+          <td class="stage">19 쇼츠</td>
+          <td>1080×1920 세로 전용 컴포지션 + 나레이션 믹스 → 마감 → QA</td>
+          <td>HyperFrames + ffmpeg <span class="pill free">무료</span></td>
+          <td><code>scripts/shorts-assemble.sh &lt;편id&gt; &lt;s1|s2|s3&gt; &lt;섹션&gt; &lt;슬러그&gt; &lt;초&gt;</code></td>
+          <td>쇼츠 3편 final</td>
+        </tr>
+        <tr class="human-row">
+          <td class="stage">20 발행</td>
+          <td>비공개 업로드 → <b>승인</b> → 09~19시 예약 → 대장 갱신 <span class="pill paid">사람 승인</span></td>
+          <td>Chrome 자동화 + YouTube Studio</td>
+          <td><code>npm run release:check</code></td>
+          <td><code>RELEASES.md</code> 갱신, 예약 확인</td>
+        </tr>
+        <tr>
+          <td class="stage">21 회수</td>
+          <td>발행 +48시간 지표 수집 → 다음 세트 기획 입력값</td>
+          <td>YouTube Studio 분석</td>
+          <td>수기 기록</td>
+          <td>CTR·평균 시청·첫 30초 이탈</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note ok">
+    <b>렌더 명령의 기본값은 "아무것도 하지 않기"다.</b>
+    <code>npm run render</code>는 결정론적 계획만 출력하고 파일도 프로세스도 건드리지 않는다.
+    <code>--execute</code>를 명시해야 편별 production lock을 잡고 strict preflight부터 순서대로 실행한다.
+    <code>--skip-qa</code>로 만든 <code>UNVERIFIED-*.mp4</code>는 canonical final을 갱신하지 않으며 발행 후보가 아니다.
+  </div>
+
+  <h3><span class="tag">실행 순서</span>--execute 가 한 프로세스에서 하는 일</h3>
+  <div class="card">
+    <p class="dim" style="font-family:var(--mono);font-size:13px;line-height:2;margin:0">
+      production lock 획득<br>
+      → strict production preflight (Git 추적 · HEAD 일치 · 전체 미디어 디코드)<br>
+      → 콘텐츠 fingerprint / 출력 SHA-256 청크 캐시 검증<br>
+      → 씬 경계 video-only 청크 렌더 (최대 1,600프레임)<br>
+      → strict concat 프레임 · timestamp cadence 검증<br>
+      → 48kHz PCM WAV 오디오를 같은 청크 경계로 렌더 후 무손실 concat<br>
+      → 임시 MOV mux → finalize (loudnorm + 리미터) → staged 전달 규격 검증 → QA<br>
+      → 통과한 staged 파일만 atomic rename으로 <span class="mint">out/&lt;id&gt;/final.mp4</span> 승격
+    </p>
+  </div>
+  <p class="muted">실패하면 기존 final은 그대로 남는다. 승격은 같은 파일시스템 안의 atomic rename이라 반쯤 쓰인 최종본이 존재할 수 없다.</p>
+</section>
+
+<!-- ============ 03 ============ -->
+<section id="assets">
+  <h2><span class="num">03</span>에셋 인벤토리</h2>
+  <p class="sub">편당 원가가 떨어진 이유는 파이프라인이 빨라져서가 아니라, 살 것을 먼저 사두고 계속 재사용했기 때문이다.</p>
+
+  <div class="inv">
+    <div><b class="mint">129컷</b><span class="lbl">생성 영상 라이브러리</span><span class="desc">Grok Imagine · 720p 6초 · 30fps 무음 변환본. 원본은 저장소 밖, 대장(JSON)만 커밋한다</span></div>
+    <div><b class="mint">236곡</b><span class="lbl">BGM 라이브러리</span><span class="desc">approved 235 + sting-only 1. 라우드니스·스펙트럼 검수 기록 포함</span></div>
+    <div><b>53개</b><span class="lbl">효과음</span><span class="desc">CC0 51종 + 합성 whoosh·riser 2종</span></div>
+    <div><b>95종</b><span class="lbl">HyperFrames 컴포지션</span><span class="desc">편별 정보 씬. 새 편은 기존 패턴을 복제해서 만든다</span></div>
+    <div><b>Pretendard</b><span class="lbl">폰트 (OFL)</span><span class="desc">가변 woff2 1개로 전 파이프라인 통일</span></div>
+  </div>
+
+  <h3>영상 라이브러리 129컷 — 카테고리별</h3>
+  <div class="card catbars">
+    <div class="catrow"><span class="cname">niche-story</span><span class="ctrack"><span class="cfill" style="width:100%"></span></span><span class="cnum">25</span></div>
+    <div class="catrow"><span class="cname">niche-sageuk</span><span class="ctrack"><span class="cfill" style="width:88%"></span></span><span class="cnum">22</span></div>
+    <div class="catrow"><span class="cname">hero</span><span class="ctrack"><span class="cfill" style="width:60%"></span></span><span class="cnum">15</span></div>
+    <div class="catrow"><span class="cname">short-bg</span><span class="ctrack"><span class="cfill" style="width:60%"></span></span><span class="cnum">15</span></div>
+    <div class="catrow"><span class="cname">paper</span><span class="ctrack"><span class="cfill" style="width:48%"></span></span><span class="cnum">12</span></div>
+    <div class="catrow"><span class="cname">illust-dark</span><span class="ctrack"><span class="cfill" style="width:32%"></span></span><span class="cnum">8</span></div>
+    <div class="catrow"><span class="cname">nature</span><span class="ctrack"><span class="cfill" style="width:32%"></span></span><span class="cnum">8</span></div>
+    <div class="catrow"><span class="cname">sting</span><span class="ctrack"><span class="cfill" style="width:28%"></span></span><span class="cnum">7</span></div>
+    <div class="catrow"><span class="cname">brand-intro</span><span class="ctrack"><span class="cfill" style="width:24%"></span></span><span class="cnum">6</span></div>
+    <div class="catrow"><span class="cname">time</span><span class="ctrack"><span class="cfill" style="width:24%"></span></span><span class="cnum">6</span></div>
+    <div class="catrow"><span class="cname">abstract</span><span class="ctrack"><span class="cfill" style="width:20%"></span></span><span class="cnum">5</span></div>
+  </div>
+
+  <p>
+    각 컷은 <code>id · category · aspect · durationSeconds · use · prompt</code>를 대장에 남긴다.
+    프롬프트를 함께 기록하는 이유는 재현 때문이 아니라 <b>같은 결함을 두 번 겪지 않기 위해서</b>다 —
+    실패한 프롬프트와 그걸 통과시킨 문구가 나란히 남는다.
+  </p>
+
+  <h3>재사용이 원가에 어떻게 작용했나</h3>
+  <div class="grid-3">
+    <div class="card">
+      <p class="card-title">1~6호</p>
+      <p class="dim" style="font-size:14px;margin:0">유료 생성기를 편마다 호출했다. 크레딧을 쓴 편의 평균 원가는 <b class="orange">₩5,886</b>.</p>
+    </div>
+    <div class="card">
+      <p class="card-title">7~10호</p>
+      <p class="dim" style="font-size:14px;margin:0">라이브러리에서 꺼내 썼다. 크레딧 사용 <b class="mint">0</b>. 남은 비용은 사실상 나레이션 글자 수뿐이다.</p>
+    </div>
+    <div class="card">
+      <p class="card-title">첫 사용 비율</p>
+      <p class="dim" style="font-size:14px;margin:0">9호는 영상 컷 24개가 전부 첫 사용, 10호는 paper 12컷 중 7컷이 첫 사용이었다. 재고가 실제로 소비되고 있다.</p>
+    </div>
+  </div>
+
+  <h3>재고 운영 규칙</h3>
+  <ul>
+    <li><b>BGM은 영상 제작 중에 만들지 않는다.</b> 별도 세션에서 미리 만들고 검수해 라이브러리에 넣는다. 렌더 중에 생성 도구를 호출하면 8GB 메모리와 집중이 동시에 깨진다.</li>
+    <li><b>라이브러리 등록 ≠ 사용 가능.</b> 스테이징 디렉터리는 Git 밖이고, 편이 실제로 쓰는 파일만 추적 디렉터리로 복사해 커밋한다. production preflight는 tracked만 통과시킨다.</li>
+    <li><b>BGM 파일은 SHA-256으로 고정한다.</b> 같은 이름의 로컬 파일이 발행된 편집본을 바꾸지 못하게 막는다. 파생 클립은 원본 트랙 ID와 정확한 발췌 시작점을 기록한다.</li>
+    <li><b>새 스톡은 HTTPS 원본 URL·라이선스·SHA-256이 없으면 채택하지 않는다.</b> 과거 다운로더가 URL을 보존하지 않은 4개만 소급 예외로 경고를 허용하고, 새 편에서는 같은 예외를 만들지 않는다.</li>
+  </ul>
+</section>
+
+<!-- ============ 04 ============ -->
+<section id="gates">
+  <h2><span class="num">04</span>품질 게이트</h2>
+  <p class="sub">"돌려봤더니 됐다"는 통과 기준이 아니다. 게이트는 세 층이고, 마지막 층은 사람 눈이다.</p>
+
+  <h3><span class="tag">layer 1</span>preflight — 개발 게이트 vs production 게이트</h3>
+  <p>
+    같은 계약을 검사하지만 Git 상태를 다루는 방식이 다르다.
+    개발 중에는 미추적·dirty 입력을 <b>집계 경고</b>로 보여주고 작업을 막지 않는다.
+    production에서는 그게 <b>하드 실패</b>다.
+  </p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>항목</th><th><code>preflight:dev</code></th><th><code>preflight --production</code></th></tr></thead>
+      <tbody>
+        <tr><td>씬 구조 · ID · 길이 · 소스 오디오 정책</td><td>검사</td><td>검사</td></tr>
+        <tr><td>BGM 승인 상태 · SHA-256 · 공백/중첩</td><td>검사</td><td>검사</td></tr>
+        <tr><td>자막 범위 이탈 · 겹침</td><td>검사</td><td>검사</td></tr>
+        <tr><td>스톡 라이선스 · 해시 형식</td><td>검사</td><td>검사</td></tr>
+        <tr><td>브랜드 인트로 위치 · 아웃트로 위치</td><td>검사</td><td>검사</td></tr>
+        <tr><td>영수증에 TODO·추정치 잔존</td><td>검사</td><td>검사</td></tr>
+        <tr><td>미디어 디코드</td><td>부분</td><td class="mint">전체 디코드</td></tr>
+        <tr><td>렌더 입력 Git 추적</td><td class="dim">집계 경고</td><td class="orange">하드 실패</td></tr>
+        <tr><td>HEAD와 일치</td><td class="dim">집계 경고</td><td class="orange">하드 실패</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">
+    검사 코드는 40여 개다 — <code>scene.audio-policy</code>, <code>bgm.gap</code>, <code>captions.overlap</code>,
+    <code>stock.license</code>, <code>brand.intro-position</code>, <code>receipt.human</code>, <code>git.untracked-input</code> 등.
+    CI도 clean checkout에서 production preflight까지 실행해 재현성을 확인한다.
+  </p>
+
+  <h3><span class="tag">layer 2</span>validatePacing — 지루한 구성을 코드가 거부한다</h3>
+  <p>스타일 가이드의 페이싱 문법을 그대로 검사로 옮긴 것이다. Studio 콘솔과 렌더 로그에 경고로 뜬다.</p>
+  <ul class="gatelist">
+    <li><span class="mark warn">B-roll</span><span>단일 스톡 컷 <b>8초 초과</b> 금지 — 나레이션 한 문장을 받쳐주고 빠진다</span></li>
+    <li><span class="mark warn">B-roll</span><span>스톡 컷 <b>연속 배치</b> 금지 — 사이에 반드시 다른 모드가 들어간다</span></li>
+    <li><span class="mark warn">B-roll</span><span>전체 분량의 <b>15% 이하</b> — "대본+TTS+스톡 영상"은 양산형 판정의 대표 패턴이다</span></li>
+    <li><span class="mark warn">페이싱</span><span>같은 <code>kind</code>가 <b>연속 50초</b>를 넘으면 경고 — 시각 모드는 40~50초마다 바뀐다</span></li>
+    <li><span class="mark warn">페이싱</span><span>히어로 컷 없이 <b>120초</b>가 지나면 경고 — 히어로는 챕터 전환의 문장 부호다</span></li>
+    <li><span class="mark warn">브랜드</span><span>인트로는 콜드오픈 <b>바로 뒤</b>, 아웃트로는 <b>마지막 씬</b>이어야 한다</span></li>
+  </ul>
+
+  <h3><span class="tag">layer 3</span>QA — 전달 규격 하드 게이트</h3>
+  <p>하나라도 어긋나면 최종본이 승격되지 않는다. 경고와 하드 실패를 명확히 나눈다.</p>
+  <ul class="gatelist">
+    <li><span class="mark">FAIL</span><span><b>H.264 영상 1개 + AAC 오디오 1개 + 그 밖의 stream 0개</b> — 데이터 트랙이나 챕터 스트림이 섞이면 실패</span></li>
+    <li><span class="mark">FAIL</span><span>해상도 1920×1080 또는 1080×1920</span></li>
+    <li><span class="mark">FAIL</span><span><b>프레임별 30fps timestamp cadence</b> — 허용 오차 1ms. VFR과 concat 이음매를 잡는 게이트다</span></li>
+    <li><span class="mark">FAIL</span><span>yuv420p · TV-range · BT.709 (색공간·primaries·transfer 전부)</span></li>
+    <li><span class="mark">FAIL</span><span>48kHz stereo · A/V 길이 차이 50ms 이하 · 전체 디코드 성공</span></li>
+    <li><span class="mark">FAIL</span><span>Integrated <b>-15.5 ~ -13.0 LUFS</b> · True Peak <b>-1.0 dBFS 이하</b></span></li>
+    <li><span class="mark warn">WARN</span><span>0.8초 이상 블랙 · 2초 이상 무음 · 2초 이상 정지 화면 · 콘택트 시트 생성 실패 — <b>사람이 판단한다</b></span></li>
+  </ul>
+
+  <h3><span class="tag">오디오</span>2-pass loudnorm + 리미터</h3>
+  <div class="card">
+    <p style="margin:0 0 10px">
+      1차 패스로 <code>loudnorm</code> 측정값(I / LRA / TP / thresh / offset)을 뽑고,
+      2차 패스에서 <code>linear=true</code>로 한 번에 게인을 건다. 그 뒤에 <code>alimiter=limit=-1.5dB</code>를 붙인다.
+    </p>
+    <p class="dim" style="margin:0">
+      리미터를 붙인 건 10호에서 <code>TP=-1.5</code>를 걸고도 실측 <b class="orange">-0.9 dBFS</b>가 나와
+      하드 게이트(-1.0)에 걸렸기 때문이다. 9호는 -1.3으로 운 좋게 통과했었다.
+      <b>loudnorm의 TP는 목표이지 보장이 아니다.</b>
+    </p>
+  </div>
+
+  <h3><span class="tag">layer 4</span>사람 눈 — 콘택트 시트로 끝내지 않는다</h3>
+  <div class="note">
+    <b>축소 이미지에서는 겹침이 보이지 않는다.</b>
+    6호 검수에서 결함 5건을 잡았는데 그중 하나는 콘택트 시트에서 전혀 보이지 않았다.
+    그 뒤로 의심 구간은 <code>ffmpeg -ss &lt;초&gt; -frames:v 1</code>로 실물 크기 프레임을 뽑아 확인한다.
+    숫자 검증만으로 통과시키지 않는다는 원칙이 여기서 나왔다.
+  </div>
+  <p>
+    섹션 컴포지션은 <b>하단 150px(y ≥ 930)을 비워 설계</b>한다. 번인 자막이 거기 깔리기 때문이다.
+    섹션 하단에 나레이션과 같은 문장을 넣는 것도 금지다 — 자막과 중복돼 같은 문장이 두 번 보인다.
+    아웃트로는 유튜브 엔드스크린 카드가 마지막 5~20초에 겹치므로 가운데 띠(세로 24~74%)를 비우고,
+    검수할 때 <code>drawbox</code>로 카드 자리를 그려 침범 여부를 눈으로 본다.
+  </p>
+</section>
+
+<!-- ============ 05 ============ -->
+<section id="numbers">
+  <h2><span class="num">05</span>실측 데이터</h2>
+  <p class="sub">여기 나오는 원가는 구독 안에서 한 편이 추가로 먹은 <b>한계비용</b>이다. 월 구독료·전기·사람 시간은 들어가지 않았다.</p>
+
+  <div class="card">
+    <p class="card-title">계산 근거</p>
+    <p class="dim" style="margin:0">
+      크레딧 단가 = 월 $19 / 270cr, 글자 단가 = 월 $6 / 30,000자, 환율 ₩1,400/$ 기준.
+      → 크레딧 <b>₩98.52/개</b>, TTS <b>₩0.28/자</b>.
+      BGM·SFX·섹션·자막·조립은 구조적으로 ₩0이다 — 라이브러리와 코드이기 때문이다.
+      이 요율은 코드 한 곳에 있고, 화면에 인쇄되는 영수증 씬과 이 문서가 같은 함수를 본다.
+    </p>
+  </div>
+
+  <h3>편당 한계원가</h3>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>편</th><th class="num">길이</th><th class="num">크레딧</th><th class="num">원가</th><th class="num">초당</th><th style="width:34%">무엇이 원가를 갈랐나</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1호</td><td class="num">56.6초</td><td class="num orange">99.24</td>
+          <td class="num"><b class="orange">₩9,851</b></td><td class="num orange">₩174.04</td>
+          <td><span class="bar-wrap"><span class="bar hot" style="width:100%"></span></span> 유료 i2v 최상위 모델로 2컷 생성</td>
+        </tr>
+        <tr>
+          <td>3호</td><td class="num">300.0초</td><td class="num">0</td>
+          <td class="num"><b class="mint">₩335</b></td><td class="num">₩1.12</td>
+          <td><span class="bar-wrap"><span class="bar" style="width:3.4%"></span></span> 나레이션 글자 수만</td>
+        </tr>
+        <tr>
+          <td>4호</td><td class="num">301.0초</td><td class="num">0</td>
+          <td class="num">₩533</td><td class="num">₩1.77</td>
+          <td><span class="bar-wrap"><span class="bar" style="width:5.4%"></span></span> 나레이션 글자 수만</td>
+        </tr>
+        <tr>
+          <td>5호</td><td class="num">301.0초</td><td class="num warm">25.5</td>
+          <td class="num">₩3,040</td><td class="num">₩10.10</td>
+          <td><span class="bar-wrap"><span class="bar warm" style="width:30.9%"></span></span> 시네마틱 컷 신규 생성</td>
+        </tr>
+        <tr>
+          <td>6호</td><td class="num">319.0초</td><td class="num warm">44.36</td>
+          <td class="num">₩4,768</td><td class="num">₩14.95</td>
+          <td><span class="bar-wrap"><span class="bar warm" style="width:48.4%"></span></span> 시네마틱 컷 신규 생성</td>
+        </tr>
+        <tr>
+          <td>7호</td><td class="num">296.9초</td><td class="num">0</td>
+          <td class="num"><b class="mint">₩442</b></td><td class="num">₩1.49</td>
+          <td><span class="bar-wrap"><span class="bar" style="width:4.5%"></span></span> 라이브러리 재사용 전환</td>
+        </tr>
+        <tr>
+          <td>8호</td><td class="num">299.8초</td><td class="num">0</td>
+          <td class="num"><b class="mint">₩482</b></td><td class="num">₩1.61</td>
+          <td><span class="bar-wrap"><span class="bar" style="width:4.9%"></span></span> 5호와 같은 시리즈·같은 길이</td>
+        </tr>
+        <tr>
+          <td>9호</td><td class="num">318초</td><td class="num">0</td>
+          <td class="num"><b class="mint">₩334</b></td><td class="num">약 ₩1.05</td>
+          <td><span class="bar-wrap"><span class="bar" style="width:3.4%"></span></span> 영상 컷 24개 전부 라이브러리</td>
+        </tr>
+        <tr>
+          <td>10호</td><td class="num">358초</td><td class="num">0</td>
+          <td class="num"><b class="mint">₩349</b></td><td class="num">약 ₩0.97</td>
+          <td><span class="bar-wrap"><span class="bar" style="width:3.5%"></span></span> paper 12컷 중 7컷 첫 사용</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="font-size:13.5px">
+    2호(72초, ₩1,473)는 상위호환 편이 나온 뒤 삭제해서 비교표에서 뺐다.
+    9·10호의 초당 값은 발행 대장의 길이와 원가로 계산한 값이다.
+  </p>
+
+  <div class="grid-3">
+    <div class="card">
+      <p class="card-title orange">156배</p>
+      <p class="dim" style="font-size:14px;margin:0">초당 원가 격차. ₩174.04(1호) 대 ₩1.12(3호). <b>총액 격차는 29배</b>인데 초당으로 보면 156배로 벌어진다.</p>
+    </div>
+    <div class="card">
+      <p class="card-title orange">13.1배</p>
+      <p class="dim" style="font-size:14px;margin:0">크레딧을 쓴 3편 평균 <b>₩5,886</b> 대 안 쓴 4편 평균 <b>₩448</b>. 원가를 가른 변수는 길이가 아니라 유료 생성기 사용 여부 하나였다.</p>
+    </div>
+    <div class="card">
+      <p class="card-title mint">6.3배</p>
+      <p class="dim" style="font-size:14px;margin:0">같은 시리즈·같은 길이인 5호(₩3,040) 대 8호(₩482). <b>싼 쪽이 씬이 더 많고 렌더는 두 배 가까이 돌았고 브랜드 인트로·아웃트로까지 붙었다.</b></p>
+    </div>
+  </div>
+
+  <div class="note ok">
+    <b>제일 짧은 영상이 제일 비쌌다.</b>
+    56.6초짜리가 ₩9,851, 5분짜리가 ₩335였다. 원가는 길이에 붙지 않고 <b>유료 생성기 호출 횟수</b>에 붙는다.
+    생성기가 만들어주는 건 결국 6초짜리 조각이고, 한 번 만들어두면 다음 편에도 쓸 수 있다 —
+    그래서 129컷을 모아둔 지금은 새로 살 일이 거의 없다.
+  </div>
+
+  <h3>렌더 시간 (실측, 8GB 맥)</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>편</th><th class="num">영상 길이</th><th class="num">렌더 실측</th><th class="num">실시간 대비</th><th>메모</th></tr></thead>
+      <tbody>
+        <tr><td>7호</td><td class="num">296.9초</td><td class="num">1,538초</td><td class="num">약 5.2배</td><td>브랜드 에셋 도입 전</td></tr>
+        <tr><td>8호</td><td class="num">299.8초</td><td class="num">2,143초</td><td class="num">약 7.1배</td><td>인트로·아웃트로 + 클립 단위 덕킹 추가</td></tr>
+        <tr><td>9호</td><td class="num">318초</td><td class="num">2,011초</td><td class="num">약 6.3배</td><td>영상 컷 비중이 높은 구성</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">렌더 시간에 사람이 낀 시간(기획·검수)은 넣지 않는다. "제작 시간"으로 뭉뚱그리면 그건 과장이고, 영수증은 정확해야 쓸모가 있다.</p>
+
+  <h3>발행 시각 — 가장 크게 갈린 변수</h3>
+  <p>
+    2026-08-18에 쇼츠 6편이 예약 설정 결함으로 새벽에 즉시 게시됐다. 조회수 0~9회에 그쳤다.
+    전량 삭제하고 같은 소재를 09~19시로 재업로드했다.
+  </p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>쇼츠</th><th class="num">새벽 발행</th><th class="num">09~19시 재배치</th><th class="num">이후 재관측</th></tr></thead>
+      <tbody>
+        <tr><td>지휘자는 연주하지 않는다</td><td class="num orange">9</td><td class="num mint">382</td><td class="num dim">—</td></tr>
+        <tr><td>왕세자가 죽기까지 사흘의 기록</td><td class="num orange">1</td><td class="num mint">134</td><td class="num mint"><b>1,303</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <b>다만 시간대는 필요조건이지 충분조건이 아니다.</b>
+    재배치한 6편 중 실제로 살아난 건 2편(1,303 · 380)이고 나머지 4편은 0~2회에 머물렀다.
+    같은 날 같은 시간대에 올려도 편차가 크다. 확정된 규칙은 <b>"새벽 발행 금지, 09~19시 안에서만 배치"</b> 하나다.
+  </div>
+
+  <h3>포맷 관찰 — 아직 가설 단계</h3>
+  <p>
+    롱폼 최고 조회수는 시청자 이득을 다룬 편(76회)이었고, 우리 성과를 자랑한 편들이 아래에 있다(23 · 16회).
+    쇼츠에서도 원리를 말한 쪽이 살고 자랑한 쪽이 죽었다.
+    <b>시청자 문제를 다루면 살고 우리 성과를 자랑하면 죽는다</b>는 가설을 세웠고,
+    그 뒤 모든 편은 "시청자가 내려야 할 결정" 하나를 다루도록 기획한다.
+    다만 표본이 작고 CTR·시청 지속률은 아직 수집하지 않았다 — 그래서 이건 규칙이 아니라 가설이다.
+  </p>
+</section>
+
+<!-- ============ 06 ============ -->
+<section id="hardware">
+  <h2><span class="num">06</span>8GB 안에서 5~6분짜리를 렌더하기</h2>
+  <p class="sub">메모리가 부족하면 렌더는 실패하지 않는다. 조용히 멈춘다. 그게 더 나쁘다.</p>
+
+  <p>
+    이 파이프라인은 메모리 8GB 머신에서 돈다. 5~6분 롱폼은 30fps 기준 9,000~11,000프레임이고,
+    한 번에 렌더하면 중간에 죽는다. 죽는 방식이 명확한 에러가 아니라 "10~12분 돌다가 프로세스가 사라짐"이라
+    원인을 찾는 데 시간이 걸렸다.
+  </p>
+
+  <div class="grid-2">
+    <div class="card">
+      <p class="card-title">씬 경계 청크 분할</p>
+      <p class="dim" style="font-size:14.5px;margin:0">
+        최대 <b>1,600프레임</b>, 반드시 <b>씬 경계</b>에서 자른다. 한 씬 자체가 상한을 넘으면 씬을 먼저 나눈다.
+        고정 시간으로 자르지 않는 이유는 청크 경계가 씬 경계와 어긋나면 재렌더 단위가 무의미해지기 때문이다.
+      </p>
+    </div>
+    <div class="card">
+      <p class="card-title">포그라운드 순차 처리</p>
+      <p class="dim" style="font-size:14.5px;margin:0">
+        3,000프레임을 백그라운드로 돌리면 10~12분 뒤 중간 종료된다(3회 연속 재현).
+        <code>--concurrency=2</code>로 낮춰도 같았다.
+        <b>포그라운드 소청크가 3배 빠르고 안정적이다.</b>
+      </p>
+    </div>
+    <div class="card">
+      <p class="card-title">콘텐츠 fingerprint 캐시</p>
+      <p class="dim" style="font-size:14.5px;margin:0">
+        청크 입력 fingerprint와 출력 SHA-256을 함께 검증한다.
+        <code>--resume</code>은 검증된 청크만 재사용하고 손상·불일치 캐시는 다시 만든다.
+        <code>--changed &lt;scene-id,...&gt;</code>는 해당 씬이 든 청크만 강제 재렌더한다.
+      </p>
+    </div>
+    <div class="card">
+      <p class="card-title">편별 production lock</p>
+      <p class="dim" style="font-size:14.5px;margin:0">
+        E2E 렌더끼리뿐 아니라 <b>나레이션 compile과 렌더의 동시 실행도 차단</b>한다.
+        죽은 PID의 stale lock도 자동 삭제하지 않는다 — 실제 프로세스를 먼저 확인한다.
+      </p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>오디오도 청크로 렌더해야 한다.</b>
+    영상은 진작 1,600프레임으로 쪼갰는데 오디오만 통짜 패스였다.
+    프레임 <b>9,500</b>쯤부터 Chrome이 버티지 못하고 폰트 <code>delayRender</code>가 영영 풀리지 않는다.
+    10,734프레임짜리 10호에서 3회 재현했고, 9,534프레임이었던 9호는 아슬하게 통과했었다.
+    지금은 오디오도 같은 씬 경계 청크로 렌더한다 — PCM WAV라 이어붙여도 무손실이고 샘플 경계가 어긋나지 않는다.
+  </div>
+
+  <p class="muted">
+    렌더 중에는 다른 무거운 작업을 일절 돌리지 않는다. ffmpeg 먹싱·정규화도 포함이다.
+    여유 메모리가 500MB까지 떨어지는 구간이 있다.
+  </p>
+</section>
+
+<!-- ============ 07 ============ -->
+<section id="findings">
+  <h2><span class="num">07</span>삽질 기록</h2>
+  <p class="sub">이 섹션이 이 문서에서 제일 쓸모 있는 부분이다. 원인을 찾는 데 걸린 시간이 곧 이 파이프라인의 원가였다.</p>
+
+  <h3>컨테이너와 타임스탬프</h3>
+
+  <div class="finding">
+    <h4><span class="idx">01</span>MKV 중간 컨테이너가 30fps 케이던스를 깬다</h4>
+    <p>
+      영상 청크를 이어붙인 뒤 오디오와 합칠 중간 컨테이너로 MKV를 썼다.
+      MKV는 PTS를 <b>1ms 단위로 반올림</b>한다. 30fps의 프레임 간격은 33.333…ms라서 프레임마다 오차가 쌓인다.
+      QA의 프레임별 timestamp cadence 하드 게이트가 이걸 잡아냈다.
+    </p>
+    <p class="fix"><b>지금은</b> 중간 컨테이너를 <b>MOV + pcm_s16le</b>로 쓴다. 영상은 stream-copy, 오디오는 무압축 PCM이라 반올림이 개입할 곳이 없다.</p>
+    <span class="src">scripts/render-master.ts · 커밋 "E2E 렌더 중간 컨테이너를 MKV → MOV"</span>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">02</span>AAC MP4 중간본은 정확히 +100ms A/V 드리프트를 만든다</h4>
+    <p>
+      쇼츠 조립에서 중간본을 AAC MP4로 두면 최종본의 오디오가 영상보다 정확히 100ms 밀린다.
+      "정확히 100ms"라서 오히려 원인 추적이 됐다 — 랜덤 오차가 아니라 인코더 프라이밍 지연이다.
+    </p>
+    <p class="fix"><b>지금은</b> 쇼츠도 롱폼과 같은 MOV + PCM 중간본을 쓴다. <code>-af</code>와 complex filtergraph를 함께 못 쓰기 때문에 믹스·패딩·트림·loudnorm을 전부 filtergraph 안에서 끝낸다.</p>
+    <span class="src">scripts/shorts-assemble.sh 상단 주석 (8호 실측)</span>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">03</span>오디오가 든 MP4 청크를 concat-copy하면 경계마다 48ms가 튄다</h4>
+    <p>
+      AAC 프레임 패딩 때문에 청크 이음매마다 48ms의 timestamp 점프가 생겼고, 7호에서 총 240ms가 실측됐다.
+    </p>
+    <p class="fix"><b>지금은</b> 영상 청크만 concat하고, 오디오는 별도로 렌더해서 한 번에 붙인다. 영상과 오디오의 조립 경로를 분리한 게 핵심이다.</p>
+    <span class="src">WORKFLOW.md §6</span>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">04</span>loudnorm의 True Peak는 목표지 보장이 아니다</h4>
+    <p>
+      <code>TP=-1.5</code>를 걸고 <code>linear=true</code>로 정규화했는데 10호 최종본이 <b>-0.9 dBFS</b>로 나왔다.
+      QA 하드 게이트는 -1.0이라 거기서 막혔다. linear 모드는 게인을 한 번에 걸기 때문에 소재에 따라 천장을 넘는다.
+      9호는 -1.3으로 <b>운 좋게</b> 통과했던 것이고, 그때 발견했으면 더 좋았을 문제다.
+    </p>
+    <p class="fix"><b>지금은</b> loudnorm 뒤에 <code>alimiter=limit=-1.5dB</code>를 붙여 천장을 실제로 강제한다. 마감 스크립트가 최종 LUFS·TP를 다시 읽어 기준을 벗어나면 실패시킨다.</p>
+    <span class="src">scripts/finalize.mjs · 커밋 "finalize 에 리미터 추가"</span>
+  </div>
+
+  <h3>생성 모델의 한계</h3>
+
+  <div class="finding">
+    <h4><span class="idx">05</span>생성 모델은 한글·한자를 쓰지 못한다 — 그래서 정보 화면은 전부 코드가 그린다</h4>
+    <p>
+      실제로 나온 결함들이다. 달력 컷에 <b>25가 두 번</b> 찍혔다. 담벼락 격문에는 <b>또렷한 가짜 한자</b>가 나왔는데 읽을 수 있는 글자가 하나도 없었다.
+      연표를 그려달라고 했더니 <b>눈금만</b> 늘어났다.
+      생성 모델은 글자를 글자로 쓰는 게 아니라 글자처럼 보이는 그림을 그린다 — 영어는 얼추 맞고 획이 많은 한글·한자는 무너진다.
+    </p>
+    <p>
+      8호에서 A/B로 확인했다. 같은 연표 구간을 코드 렌더로 만들면 연도와 인명을 순차로 찍고 공백 구간을 브레이스로 시각화하는데,
+      생성 컷은 눈금만 늘어난다. <b>프롬프트로 해결되는 문제가 아니다.</b>
+    </p>
+    <p class="fix"><b>지금은</b> 역할을 나눈다 — <b>연표·데이터·고유명사는 코드 렌더</b>, <b>정서·비유·회상은 생성 컷</b>. 매 영상에 박히는 채널 워드마크도 배경만 생성 컷이고 한글은 코드로 얹는다.</p>
+    <span class="src">assets/grok/library.json findings · 10호 편 전체가 이 주제다</span>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">06</span>"illegible" 한 단어로는 글자가 뭉개지지 않는다</h4>
+    <p>
+      글자가 나오는 장면에 "읽을 수 없게"라고만 쓰면 또렷한 가짜 글자가 나온다.
+      야간 + 급한 측면 각도 + 찢김·얼룩 + "faded into illegible grey smudges with no distinct characters"를
+      <b>함께</b> 걸어야 실제로 뭉개진다.
+    </p>
+    <p class="fix">세이프티 필터도 같은 방식으로 우회한다 — 동작 표현("붓이 종이에 닿는다")이 차단되면 정물("붓이 벼루에 놓여 있다")로 바꾼다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">07</span>개수 결함은 부정문만으로 잡히지 않는다</h4>
+    <p>
+      달이 두 개 나오는 컷이 반복됐다. "달은 하나"라고 쓰는 것으로는 부족했고,
+      "exactly one single moon" + "only one moon in the entire frame" + "no second moon, no reflection, no lens flare"를
+      함께 걸어야 해결됐다. <b>개수는 프레임마다 달라질 수 있어서 5지점을 확인한다.</b>
+    </p>
+    <p>
+      인물도 같다. "Faces not visible"만으로는 3/4 측면 얼굴이 또렷하게 나왔다.
+      뒷모습을 명시적으로 고정하는 문구를 함께 걸어야 막히고, <b>중간에 돌아설 수 있어서 시작·중간·끝 3프레임을 본다.</b>
+    </p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">08</span>생성기가 만든 종이는 손그림 종이보다 항상 노랗고 어둡다</h4>
+    <p>
+      같은 "미색 종이"를 요청해도 생성 컷은 <code>#EBE3CC</code>, 손그림 렌더는 <code>#F3EFE0</code>로 나온다.
+      섞어 붙이면 종이가 두 종류로 보인다.
+    </p>
+    <p class="fix"><b>지금은</b> 회수 직후 <code>colorbalance</code> + <code>eq</code>로 보정한 뒤에야 라이브러리에 넣는다. 밝은 종이 컷과 어두운 감성 일러스트도 서로 다른 구간에만 쓴다.</p>
+  </div>
+
+  <h3>브라우저 자동화</h3>
+
+  <div class="finding">
+    <h4><span class="idx">09</span>예약 시각은 JS로 input.value를 세팅할 수 없다</h4>
+    <p>
+      네이티브 setter를 쓰고 <code>input</code>·<code>change</code> 이벤트까지 보내도 화면의 값만 바뀌고
+      컴포넌트 내부 상태는 바뀌지 않는다. 확인 문구가 "0:00"으로 나와 자정 예약이 걸렸고,
+      편집 페이지에서 실제 클릭·타이핑으로 다시 고쳐야 했다.
+    </p>
+    <p class="fix"><b>지금은</b> 날짜는 달력 셀 클릭, 시각은 실제 타이핑만 신뢰한다. 절차도 고정했다 — 필드 클릭 → <code>document.activeElement</code>의 tag와 value 확인 → 전체 선택 → 타이핑 → 코드포인트 검증 → Enter → 목록에서 예약 시각 재확인.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">10</span>날짜만 바꾸면 시각이 과거로 남아 즉시 게시된다</h4>
+    <p>
+      공개 상태 단계에서 날짜만 변경하면 시각은 기본값(이미 지난 시각)으로 남는다.
+      예약 버튼이 비활성화되고 빨간 경고가 뜨는데, 그대로 진행하면 <b>예약이 걸리지 않은 채 즉시 게시된다.</b>
+      이걸로 쇼츠 6편이 새벽에 나가 0~9회로 죽었다. 시간대 설정은 정상이었다 — 시간대는 원인이 아니었다.
+    </p>
+    <p class="fix"><b>지금은</b> 저장 후 Studio 목록에서 "예약됨 + 정확한 시각"까지 눈으로 확인하는 항목이 세트 종료 체크리스트에 들어가 있다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">11</span>한글 입력은 조합이 깨진다</h4>
+    <p>
+      브라우저 자동화의 일반 타이핑 액션이 한글 조합을 잘못 처리해 "썰"이 "썬"으로 들어갔다.
+      제목·설명처럼 틀리면 안 되는 필드에서 이게 발생하면 발행 자체가 사고가 된다.
+    </p>
+    <p class="fix"><b>지금은</b> <code>execCommand('insertText')</code>로 넣고 <b>코드포인트 단위로 검증</b>한다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">12</span>좌표 클릭은 창 크기가 바뀌는 순간 사고가 된다</h4>
+    <p>
+      에셋 회수 화면에서 다운로드 버튼과 삭제 버튼이 40px 간격이다.
+      창 폭이 1568에서 1440으로 바뀌자 같은 좌표가 삭제 버튼에 떨어져 삭제 확인 다이얼로그가 떴다(취소해서 컷은 무사했다).
+    </p>
+    <p class="fix"><b>지금은</b> 좌표 대신 <code>aria-label</code>로 찾아 클릭한다. 부수 효과로 폴링 신호도 생겼다 — 해당 요소가 <code>null</code>이면 아직 생성 중이라는 뜻이라, 컷당 25~35초로 들쭉날쭉한 생성 시간을 고정 대기 없이 기다릴 수 있다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">13</span>브라우저의 연속 자동 다운로드 차단은 우회할 수 없다</h4>
+    <p>
+      배치로 에셋을 회수할 때 크롬이 첫 1회 뒤로 자동 다운로드를 막는다.
+      좌표 클릭·blob 다운로드·로컬 수신 서버로의 POST를 전부 시도했고 전부 막혔다(사이트 CSP가 localhost도 차단한다).
+    </p>
+    <p class="fix"><b>해결은 하나뿐이다</b> — 브라우저 설정에서 해당 도메인의 자동 다운로드를 미리 허용해두는 것. 배치 시작 전에 해둘 일로 문서에 박았다. 그리고 다운로드가 막혀도 생성물은 계정에 남으므로 URL만 기록해두면 나중에 회수할 수 있다. <b>재생성은 불필요하다.</b></p>
+  </div>
+
+  <h3>검수와 운영</h3>
+
+  <div class="finding">
+    <h4><span class="idx">14</span>영수증 자리값을 그대로 렌더하면 화면에 ₩0이 인쇄된다</h4>
+    <p>
+      원가를 화면에 띄우는 씬이 있는데, 스펙의 영수증 필드가 자리값인 채로 렌더가 돌아 실제로 ₩0이 인쇄된 적이 있다.
+      "원가를 공개한다"가 이 채널의 무기인데 그게 0으로 찍히면 무기가 아니라 흠이다.
+    </p>
+    <p class="fix"><b>지금은</b> preflight가 영수증 필드에 TODO·추정치가 남아 있으면 실패시킨다. 크레딧 사용량은 생성 전후 잔액 차분으로 구한다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">15</span>자동 세로 변환은 롱폼을 쇼츠로 못 만든다</h4>
+    <p>
+      가로 영상을 세로로 자동 변환하는 기능을 A/B로 검증했고 탈락시켰다.
+      22초 소스에 22초를 명시했는데 <b>7초로 잘렸고</b>, 2개 변형 중 1개는 실패했다.
+      결과물은 가로 화면을 세로 캔버스 가운데 <b>레터박스로 박은 형태</b>였고 글자가 읽히지 않는 크기로 축소됐다.
+    </p>
+    <p class="fix">근본 원인은 우리 롱폼이 16:9 레이아웃으로 설계된 타이포 중심 화면이라는 것이다 — 잘라내면 정보가 사라진다. <b>쇼츠는 세로 전용 컴포지션으로 새로 설계하는 것이 유일한 방법이다.</b> 세로 소재를 롱폼에 쓸 때도 회전·레터박스 대신 라운드 프레임 PiP로 얹는다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">16</span>훅 사전 검증 도구는 우리 포맷에 안 맞았다</h4>
+    <p>
+      영상의 훅 강도를 예측해주는 도구를 도입하려다 제약 두 개에 걸렸다.
+      <b>완성된 영상만</b> 받고(텍스트 훅 후보를 미리 검증할 수 없다), <b>16초 이하만</b> 받는다.
+      우리 쇼츠는 23~25초라 아예 입력이 안 된다.
+    </p>
+    <p class="fix"><b>대체안</b> — 검색 수요 데이터로 소재와 배치 순서를 정한다. 실제로 특정 주제의 검색량이 다른 주제의 1.5~2배로 나와 그 편을 프라임 시간대에 배치했다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">17</span>내가 설정한 값과 다르면, 결함을 의심하기 전에 물어본다</h4>
+    <p>
+      업로드 중에 롱폼 공개 범위가 비공개에서 공개로 바뀐 걸 발견하고 결함으로 판단해 되돌렸다.
+      <b>사용자가 시사하려고 직접 바꾼 것이었다.</b> 되돌린 건 불필요한 조치였다.
+    </p>
+    <p class="fix">Studio는 사람도 같이 쓰는 화면이다. 자동화가 단독 소유자가 아닌 환경에서는 "상태가 예상과 다름 = 결함"이 성립하지 않는다. 되돌리기는 확인 뒤에 한다.</p>
+  </div>
+
+  <div class="finding">
+    <h4><span class="idx">18</span>인트로를 맨 앞에 두지 않는다</h4>
+    <p>
+      채널 인트로(5.8초)는 콜드오픈 <b>다음</b>, 씬 인덱스 1에 들어간다.
+      훅보다 로고가 먼저 나오면 첫 5초 이탈이 커진다. 훅으로 붙잡은 다음에 채널을 보여준다.
+    </p>
+    <p class="fix">preflight가 인트로 위치와 아웃트로 위치, 그리고 두 씬의 소스 오디오 정책(<code>exclusive</code>)을 강제한다. 규칙을 문서에만 적어두면 다음 편에서 잊는다.</p>
+  </div>
+</section>
+
+<!-- ============ 08 ============ -->
+<section id="open">
+  <h2><span class="num">08</span>아직 안 된 것</h2>
+  <p class="sub">공개하는 김에 구멍도 같이 적는다. 여기 적히지 않은 성과는 아직 없는 성과다.</p>
+
+  <ul>
+    <li><b>CTR·시청 지속률을 한 번도 수집하지 않았다.</b> 조회수는 목록에서 보이지만 클릭률과 첫 30초 이탈률은 분석 탭에서만 볼 수 있고, 아직 열지 않았다. 그동안의 개선(자막 도입, 효과음 추가, 페이싱 조정)은 전부 <b>감으로</b> 한 것이다. 발행 +48시간 회수 단계를 체크리스트에 넣었지만 실행 기록은 아직 0건이다.</li>
+    <li><b>자막 타이밍은 실측 정렬이 아니다.</b> 현재는 실측 TTS 클립 길이 안에서 대본 글자 수에 비례해 배분한다. 로컬 음성인식은 보조 자료로만 쓴다. 보조 TTS 엔진에 단어 단위 타임스탬프 API가 있어서, 엔진을 전환하면 추정을 실측 정렬로 바꿀 수 있다 — 아직 하지 않았다.</li>
+    <li><b>쇼츠는 매번 손으로 새로 설계한다.</b> 롱폼에서 훅 3개를 고르고 세로 컴포지션을 새로 만드는 작업이 자동화되어 있지 않다. 자동 클리핑은 위 15번 이유로 탈락했다.</li>
+    <li><b>제목 가설과 보이스 선택 가설이 검증 대기 중이다.</b> 상위 조회수 쇼츠는 제목이 주장을 말했고 0회짜리 하나만 주장을 숨겼다는 관찰이 있는데, 표본이 작아 아직 규칙이 아니다.</li>
+    <li><b>표본이 작다.</b> 롱폼 10편, 쇼츠 24편이다. 이 문서의 원가·렌더 시간은 실측이지만, 조회수 관련 해석은 전부 이 표본 크기 안에서만 유효하다.</li>
+  </ul>
+
+  <div class="note ok">
+    <b>이 문서의 모든 숫자는 저장소 안의 파일에서 나왔다.</b>
+    편당 원가는 각 편의 스펙에 기록된 실측 사용량을 코드의 요율로 계산한 값이고,
+    조회수와 발행 상태는 관리 화면에서 직접 확인해 기록한 값이다.
+    확인하지 못한 값은 추정으로 채우지 않고 비워 둔다 — 대장의 규칙이기도 하다.
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="stamp">auto-motion · 로컬 유튜브 롱폼 자동화 파이프라인</p>
+    <p>Remotion 4 · HyperFrames 0.7.107 · ffmpeg · Whisper.cpp · Node 20.9+ · Pretendard (OFL)</p>
+    <p>기준 시점 2026-08-20 · 롱폼 10편 / 쇼츠 24편 / 커밋 92개 · 첫 커밋 2026-08-13</p>
+  </div>
+</footer>
+
+</body>
+</html>
